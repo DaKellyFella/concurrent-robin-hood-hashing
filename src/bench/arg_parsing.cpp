@@ -19,6 +19,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+extern int optind;
+extern char *optarg;
+
 namespace concurrent_data_structures {
 
 namespace {
@@ -43,7 +46,7 @@ static const std::map<std::string, Allocator> allocator_map{
 };
 
 enum class BenchmarkType { Set };
-}
+} // namespace
 
 bool parse_base_arg(BenchmarkConfig &base, const int current_option, char *arg,
                     BenchmarkType type) {
@@ -58,9 +61,7 @@ bool parse_base_arg(BenchmarkConfig &base, const int current_option, char *arg,
     auto reclaimer_res = reclaimer_map.find(std::string(optarg));
     if (reclaimer_map.end() == reclaimer_res) {
       std::cout << "Invalid reclaimer choice." << std::endl;
-      if (type == BenchmarkType::Set) {
-        set_print_help_and_exit();
-      }
+      set_print_help_and_exit();
     } else {
       base.reclaimer = reclaimer_res->second;
     }
@@ -70,11 +71,7 @@ bool parse_base_arg(BenchmarkConfig &base, const int current_option, char *arg,
     auto allocator_res = allocator_map.find(std::string(optarg));
     if (allocator_map.end() == allocator_res) {
       std::cout << "Invalid allocator choice." << std::endl;
-      if (type == BenchmarkType::Set) {
-        set_print_help_and_exit();
-      } else {
-        queue_print_help_and_exit();
-      }
+      set_print_help_and_exit();
     } else {
       base.allocator = allocator_res->second;
     }
@@ -133,7 +130,6 @@ SetBenchmarkConfig parse_set_args(std::int32_t argc, char *argv[]) {
   return config;
 }
 
-
 void set_print_help_and_exit() {
   std::cout
       << "L: Load Factor. Default = 40%.\n"
@@ -151,4 +147,4 @@ void set_print_help_and_exit() {
   exit(0);
 }
 
-}
+} // namespace concurrent_data_structures

@@ -26,12 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <getopt.h>
 #include <map>
 
-extern int optind;
-extern char *optarg;
-
 namespace concurrent_data_structures {
 
-struct SetBenchmarkConfig;
 SetBenchmarkConfig parse_set_args(std::int32_t argc, char *argv[]);
 void set_print_help_and_exit();
-}
+} // namespace concurrent_data_structures

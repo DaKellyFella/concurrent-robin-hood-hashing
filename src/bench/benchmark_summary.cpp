@@ -66,62 +66,55 @@ void set_config_summary(const SetBenchmarkConfig &config,
 static const double milliseconds = 1000.0;
 static const double microseconds = 1000000.0;
 
-void papi_summary(const std::chrono::seconds &duration,
+void papi_summary(const SetThreadBenchmarkResult &result,
+                  const std::chrono::seconds &duration,
                   const PapiCounters &papi_counters, std::ofstream &human_file,
                   std::ofstream &csv_key_file, std::ofstream &csv_data_file,
                   bool write_keys) {
+  std::size_t total_operations_attempted = result.query_attempts +
+                                           result.addition_attempts +
+                                           result.removal_attempts;
 
-  double seconds = static_cast<double>(duration.count());
-  double level1_cache_misses_per_second =
+  double level1_cache_misses_per_op =
       static_cast<double>(
           papi_counters.counters[PAPI_EVENTS::L1_CACHE_MISSES]) /
-      seconds;
-  double level1_cache_misses_per_microseconds =
-      level1_cache_misses_per_second / microseconds;
+      total_operations_attempted;
 
-  double level2_cache_misses_per_second =
+  double level2_cache_misses_per_op =
       static_cast<double>(
           papi_counters.counters[PAPI_EVENTS::L2_CACHE_MISSES]) /
-      seconds;
-  double level2_cache_misses_per_microseconds =
-      level2_cache_misses_per_second / microseconds;
+      total_operations_attempted;
 
-  double instruction_stalls_per_second =
+  double instruction_stalls_per_op =
       static_cast<double>(
           papi_counters.counters[PAPI_EVENTS::INSTRUCTION_STALLS]) /
-      seconds;
-  double instruction_stalls_per_microseconds =
-      instruction_stalls_per_second / microseconds;
+      total_operations_attempted;
 
-  double total_instructions_per_second =
+  double total_instructions_per_op =
       static_cast<double>(
           papi_counters.counters[PAPI_EVENTS::TOTAL_INSTRUCTIONS]) /
-      seconds;
-  double total_instructions_per_microsecond =
-      total_instructions_per_second / microseconds;
+      total_operations_attempted;
 
-  double level1_data_cache_misses_per_second =
+  double level1_data_cache_misses_per_op =
       static_cast<double>(
           papi_counters.counters[PAPI_EVENTS::L1_DATA_CACHE_MISSES]) /
-      seconds;
-  double level1_data_cache_misses_per_microsecond =
-      level1_data_cache_misses_per_second / microseconds;
+      total_operations_attempted;
 
   write_field(human_file, csv_key_file, csv_data_file,
               PAPI_EVENTS::get_event_name(PAPI_EVENTS::L1_DATA_CACHE_MISSES),
-              level1_data_cache_misses_per_microsecond, write_keys);
+              level1_data_cache_misses_per_op, write_keys);
   write_field(human_file, csv_key_file, csv_data_file,
               PAPI_EVENTS::get_event_name(PAPI_EVENTS::L1_CACHE_MISSES),
-              level1_cache_misses_per_microseconds, write_keys);
+              level1_cache_misses_per_op, write_keys);
   write_field(human_file, csv_key_file, csv_data_file,
               PAPI_EVENTS::get_event_name(PAPI_EVENTS::L2_CACHE_MISSES),
-              level2_cache_misses_per_microseconds, write_keys);
+              level2_cache_misses_per_op, write_keys);
   write_field(human_file, csv_key_file, csv_data_file,
               PAPI_EVENTS::get_event_name(PAPI_EVENTS::INSTRUCTION_STALLS),
-              instruction_stalls_per_microseconds, write_keys);
+              instruction_stalls_per_op, write_keys);
   write_field(human_file, csv_key_file, csv_data_file,
               PAPI_EVENTS::get_event_name(PAPI_EVENTS::TOTAL_INSTRUCTIONS),
-              total_instructions_per_microsecond, write_keys);
+              total_instructions_per_op, write_keys);
 }
 
 void operations_per_thread_summary(const SetThreadBenchmarkResult &result,
@@ -132,8 +125,8 @@ void operations_per_thread_summary(const SetThreadBenchmarkResult &result,
                                    bool print_papi, bool write_keys,
                                    bool last = false) {
   if (print_papi) {
-    papi_summary(duration, result.papi_counters, human_file, csv_key_file,
-                 csv_data_file, write_keys);
+    papi_summary(result, duration, result.papi_counters, human_file,
+                 csv_key_file, csv_data_file, write_keys);
     human_file << std::endl;
   }
 
@@ -183,68 +176,6 @@ void operations_per_thread_summary(const SetThreadBenchmarkResult &result,
               result.query_successes, write_keys);
   human_file << "Queries succeeded as percentage: "
              << query_successes_percentage << "%" << std::endl;
-  write_field(human_file, csv_key_file, csv_data_file, "Insertion attempted",
-              result.addition_attempts, write_keys);
-  human_file << "Insertions attempted as percentage: "
-             << insertion_attempt_percentage << "%" << std::endl;
-  write_field(human_file, csv_key_file, csv_data_file, "Insertion succeeded",
-              result.addition_successes, write_keys);
-  human_file << "Insertions succeeded as percentage: "
-             << insertion_successes_percentage << "%" << std::endl;
-  write_field(human_file, csv_key_file, csv_data_file, "Removes attempted",
-              result.removal_attempts, write_keys);
-  human_file << "Removes attempted as percentage: "
-             << removal_attempt_percentage << "%" << std::endl;
-  write_field(human_file, csv_key_file, csv_data_file, "Removes successes",
-              result.removal_successes, write_keys);
-  human_file << "Removes succeeded as percentage: "
-             << removal_successes_percentage << "%" << std::endl;
-  write_field(human_file, csv_key_file, csv_data_file,
-              "Total Ops per microsecond", attempted_ops_per_microsecond,
-              write_keys, last, true);
-}
-
-void operations_per_thread_summary(const QueueThreadBenchmarkResult &result,
-                                   std::ofstream &human_file,
-                                   std::ofstream &csv_key_file,
-                                   std::ofstream &csv_data_file,
-                                   const std::chrono::seconds &duration,
-                                   bool print_papi, bool write_keys,
-                                   bool last = false) {
-  if (print_papi) {
-    papi_summary(duration, result.papi_counters, human_file, csv_key_file,
-                 csv_data_file, write_keys);
-    human_file << std::endl;
-  }
-
-  std::size_t total_operations_attempted =
-      result.addition_attempts + result.removal_attempts;
-  std::size_t total_operations_succeeded =
-      result.addition_successes + result.removal_successes;
-  double attempted_ops_per_second =
-      static_cast<double>(total_operations_attempted) /
-      static_cast<double>(duration.count());
-  double attempted_ops_per_microsecond =
-      attempted_ops_per_second / microseconds;
-  // Operations as a percentage of the work done.
-  double insertion_attempt_percentage =
-      (static_cast<double>(result.addition_attempts) /
-       static_cast<double>(total_operations_attempted)) *
-      100.0;
-  double removal_attempt_percentage =
-      (static_cast<double>(result.removal_attempts) /
-       static_cast<double>(total_operations_attempted)) *
-      100.0;
-
-  double insertion_successes_percentage =
-      (static_cast<double>(result.addition_successes) /
-       static_cast<double>(total_operations_succeeded)) *
-      100.0;
-  double removal_successes_percentage =
-      (static_cast<double>(result.removal_successes) /
-       static_cast<double>(total_operations_succeeded)) *
-      100.0;
-
   write_field(human_file, csv_key_file, csv_data_file, "Insertion attempted",
               result.addition_attempts, write_keys);
   human_file << "Insertions attempted as percentage: "
@@ -319,4 +250,4 @@ void produce_summary(const SetBenchmarkConfig &config,
   csv_data_file << std::endl;
 }
 
-} // namespace concurrent_hash_tables
+} // namespace concurrent_data_structures
